@@ -121,6 +121,26 @@ Ou plus simplement : bouton **« Tester l'IP de sortie »** dans l'interface.
 > Le service WARP a besoin de `/dev/net/tun` et de la capability `NET_ADMIN` — OK sur un
 > VPS Linux et sur Docker Desktop (backend WSL2).
 
+## Image Docker prête à l'emploi (GitHub Actions)
+
+Un workflow ([`.github/workflows/docker.yml`](.github/workflows/docker.yml)) construit et
+publie une image **multi-arch (amd64 + arm64)** sur le GitHub Container Registry à chaque
+push sur `main` (et sur les tags `v*`). Image :
+
+```
+ghcr.io/guiro28/stremio-addon-proxy:latest
+```
+
+Pour l'utiliser au lieu de builder localement, décommente la ligne `image:` dans le
+compose (et retire `build: .`). Le dépôt étant **privé**, l'image l'est aussi : soit tu
+rends le *package* public sur GitHub, soit tu t'authentifies sur le VPS avant de tirer :
+
+```bash
+echo $GHCR_TOKEN | docker login ghcr.io -u guiro28 --password-stdin
+```
+
+(`GHCR_TOKEN` = un *Personal Access Token* GitHub avec le scope `read:packages`.)
+
 ## Authentification de l'interface
 
 L'UI et l'API de gestion sont protégées par une **page de login** (session par cookie

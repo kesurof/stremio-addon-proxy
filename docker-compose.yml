@@ -1,7 +1,8 @@
 services:
   stremio-proxy:
     build: .
-    # image: node:20-alpine  # (build local via Dockerfile ci-dessus)
+    # Alternative sans build local (image multi-arch amd64/arm64 publiee par GitHub Actions) :
+    # image: ghcr.io/guiro28/stremio-addon-proxy:latest
     container_name: stremio-proxy
     restart: unless-stopped
     ports:

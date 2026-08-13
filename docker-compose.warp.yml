@@ -37,6 +37,8 @@ services:
 
   stremio-proxy:
     build: .
+    # Alternative sans build local (image multi-arch amd64/arm64 publiee par GitHub Actions) :
+    # image: ghcr.io/guiro28/stremio-addon-proxy:latest
     container_name: stremio-proxy
     restart: unless-stopped
     depends_on:
