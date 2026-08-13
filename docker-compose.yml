@@ -1,0 +1,18 @@
+services:
+  stremio-proxy:
+    build: .
+    # image: node:20-alpine  # (build local via Dockerfile ci-dessus)
+    container_name: stremio-proxy
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    environment:
+      - PORT=7000
+      - DATA_DIR=/app/data
+      # Authentification de l'interface web (UI + API). Laisse vide = interface ouverte.
+      - AUTH_USER=admin
+      - AUTH_PASS=change-moi
+      # URL publique si tu es derriere un reverse-proxy HTTPS (recommande pour Stremio web) :
+      # - PUBLIC_URL=https://proxy.mondomaine.com
+    volumes:
+      - ./data:/app/data

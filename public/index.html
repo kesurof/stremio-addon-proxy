@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stremio Addon Proxy</title>
+  <style>
+    :root {
+      --bg: #0f1220; --card: #191d33; --line: #2a2f4a;
+      --fg: #e8eaf5; --muted: #9aa0c0; --accent: #7c5cff; --accent2: #38d39f;
+      --danger: #ff5c7c;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body { margin: 0; min-height: 100vh; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #24284a, var(--bg)) no-repeat; color: var(--fg); }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 28px 18px 60px; }
+    h1 { font-size: 24px; margin: 0 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+      padding: 18px; margin-bottom: 18px; }
+    .card h2 { font-size: 15px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 5px; }
+    input, select { width: 100%; padding: 10px 12px; background: #0d1022; color: var(--fg);
+      border: 1px solid var(--line); border-radius: 9px; font-size: 14px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 140px; }
+    button { cursor: pointer; border: 0; border-radius: 9px; padding: 10px 16px; font-size: 14px;
+      font-weight: 600; color: #fff; background: var(--accent); }
+    button.ghost { background: #262b47; }
+    button.small { padding: 6px 10px; font-size: 12px; }
+    button.danger { background: var(--danger); }
+    button:disabled { opacity: .5; cursor: default; }
+    .addon { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line);
+      border-radius: 11px; margin-top: 10px; background: #12162a; }
+    .addon .name { font-weight: 600; }
+    .addon .url { color: var(--muted); font-size: 12px; word-break: break-all; }
+    .addon .actions { display: flex; gap: 8px; }
+    .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px;
+      background: #23284a; color: var(--muted); margin-left: 8px; }
+    .out { font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .ok { color: var(--accent2); } .err { color: var(--danger); }
+    a { color: var(--accent2); }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+    code { background: #0d1022; padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+    .tile { background: #12162a; border: 1px solid var(--line); border-radius: 11px; padding: 12px 14px; }
+    .tile .v { font-size: 22px; font-weight: 700; line-height: 1.1; }
+    .tile .v small { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .tile .k { font-size: 11px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .04em; }
+    .tile.live .v { color: var(--accent2); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+      <div>
+        <h1>🎬 Stremio Addon Proxy</h1>
+        <p class="sub">Ajoute un addon, colle le lien « proxifié » généré dans Stremio. Les flux vidéo HTTP/HTTPS passeront par ce serveur.</p>
+      </div>
+      <button id="logout" class="ghost small" style="display:none; white-space:nowrap;">Déconnexion</button>
+    </div>
+
+    <div class="card">
+      <h2>Statistiques <span class="pill" id="uptime">—</span></h2>
+      <div class="tiles" id="tiles"></div>
+    </div>
+
+    <div class="card">
+      <h2>Sortie réseau</h2>
+      <div class="row">
+        <div style="flex:1">
+          <label>Mode</label>
+          <select id="mode">
+            <option value="direct">Direct — IP du serveur</option>
+            <option value="socks">SOCKS5 — WARP / VPN</option>
+            <option value="http">Proxy HTTP</option>
+          </select>
+        </div>
+        <div style="flex:2">
+          <label>URL du proxy (si SOCKS/HTTP)</label>
+          <input id="upUrl" placeholder="socks5://127.0.0.1:40000" />
+        </div>
+      </div>
+      <div class="hint">Exemples WARP : <code>socks5://127.0.0.1:40000</code> · Proxy HTTP : <code>http://user:pass@host:port</code>. Laisse vide en mode Direct.</div>
+      <div class="row" style="margin-top:14px">
+        <button id="saveSettings">Enregistrer</button>
+        <button id="testUp" class="ghost">Tester l'IP de sortie</button>
+      </div>
+      <div id="settingsOut" class="out"></div>
+    </div>
+
+    <div class="card">
+      <h2>Ajouter un addon</h2>
+      <label>URL du manifest de l'addon</label>
+      <input id="manifestUrl" placeholder="https://exemple-addon.com/manifest.json" />
+      <div class="hint">Colle l'URL <code>…/manifest.json</code> de l'addon (celle que tu mettrais normalement dans Stremio).</div>
+      <div style="margin-top:14px"><button id="addBtn">Ajouter</button></div>
+      <div id="addOut" class="out"></div>
+    </div>
+
+    <div class="card">
+      <h2>Addons proxifiés</h2>
+      <div id="list"></div>
+    </div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+  return data;
+}
+
+async function refresh() {
+  const s = await api('/api/state');
+  $('mode').value = s.settings.upstream.mode;
+  $('upUrl').value = s.settings.upstream.url || '';
+  $('logout').style.display = s.authEnabled ? 'inline-block' : 'none';
+  renderList(s.addons);
+}
+
+$('logout').onclick = async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
+};
+
+function fmtBps(n) {
+  if (!n || n < 1) return '0<small> o/s</small>';
+  const u = ['o/s', 'Ko/s', 'Mo/s', 'Go/s'];
+  const i = Math.min(u.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+  return (n / Math.pow(1024, i)).toFixed(i ? 1 : 0) + '<small> ' + u[i] + '</small>';
+}
+function fmtUptime(sec) {
+  const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+  if (d) return `${d}j ${h}h`;
+  if (h) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+async function refreshStats() {
+  let st;
+  try { st = await api('/api/stats'); } catch { return; }
+  $('uptime').textContent = 'uptime ' + fmtUptime(st.uptimeSec);
+  const tiles = [
+    { k: 'Lectures en cours', v: st.playActive, live: true },
+    { k: 'Bande passante', v: fmtBps(st.bandwidthBps), html: true, live: true },
+    { k: 'Lectures (total)', v: st.plays }
+  ];
+  $('tiles').innerHTML = tiles.map((t) =>
+    `<div class="tile${t.live ? ' live' : ''}"><div class="v">${t.html ? t.v : escapeHtml(String(t.v))}</div><div class="k">${t.k}</div></div>`
+  ).join('');
+}
+
+function renderList(addons) {
+  const el = $('list');
+  if (!addons.length) { el.innerHTML = '<p class="hint">Aucun addon pour l\'instant.</p>'; return; }
+  el.innerHTML = '';
+  for (const a of addons) {
+    const stremioLink = a.installUrl.replace(/^https?:\/\//, 'stremio://');
+    const div = document.createElement('div');
+    div.className = 'addon';
+    div.innerHTML = `
+      <div style="flex:1">
+        <div class="name">${escapeHtml(a.name)}</div>
+        <div class="url">${escapeHtml(a.installUrl)}</div>
+      </div>
+      <div class="actions">
+        <a href="${stremioLink}"><button class="small">Installer</button></a>
+        <button class="small ghost" data-copy="${encodeURIComponent(a.installUrl)}">Copier</button>
+        <button class="small danger" data-del="${a.id}">Suppr.</button>
+      </div>`;
+    el.appendChild(div);
+  }
+  el.querySelectorAll('[data-del]').forEach((b) => b.onclick = async () => {
+    await api('/api/addons/' + b.dataset.del, { method: 'DELETE' });
+    refresh();
+  });
+  el.querySelectorAll('[data-copy]').forEach((b) => b.onclick = async () => {
+    await navigator.clipboard.writeText(decodeURIComponent(b.dataset.copy));
+    b.textContent = 'Copié ✓'; setTimeout(() => b.textContent = 'Copier', 1200);
+  });
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+$('addBtn').onclick = async () => {
+  const out = $('addOut'); out.textContent = 'Vérification…'; out.className = 'out';
+  try {
+    await api('/api/addons', { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ manifestUrl: $('manifestUrl').value }) });
+    $('manifestUrl').value = '';
+    out.textContent = 'Addon ajouté ✓'; out.className = 'out ok';
+    refresh();
+  } catch (e) { out.textContent = e.message; out.className = 'out err'; }
+};
+
+$('saveSettings').onclick = async () => {
+  const out = $('settingsOut'); out.textContent = 'Enregistrement…'; out.className = 'out';
+  try {
+    await api('/api/settings', { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ upstream: { mode: $('mode').value, url: $('upUrl').value } }) });
+    out.textContent = 'Enregistré ✓'; out.className = 'out ok';
+  } catch (e) { out.textContent = e.message; out.className = 'out err'; }
+};
+
+$('testUp').onclick = async () => {
+  const out = $('settingsOut'); out.textContent = 'Test en cours…'; out.className = 'out';
+  try {
+    const r = await api('/api/test-upstream', { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ upstream: { mode: $('mode').value, url: $('upUrl').value } }) });
+    out.textContent = `IP de sortie (${r.mode}) : ${r.ip}`; out.className = 'out ok';
+  } catch (e) { out.textContent = 'Échec : ' + e.message; out.className = 'out err'; }
+};
+
+refresh();
+refreshStats();
+setInterval(refreshStats, 2000);
+</script>
+</body>
+</html>

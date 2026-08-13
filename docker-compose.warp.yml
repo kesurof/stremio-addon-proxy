@@ -1,0 +1,59 @@
+# Stremio Addon Proxy + Cloudflare WARP (sortie SOCKS5)
+#
+#   docker compose -f docker-compose.warp.yml up -d --build
+#
+# Le proxy sort par WARP grace a UPSTREAM_MODE=socks / UPSTREAM_URL=socks5://warp:1080.
+# (Ces valeurs ne s'appliquent qu'au 1er demarrage ; ensuite l'UI fait foi et persiste
+#  dans data/config.json. Pour reforcer WARP : supprime data/config.json ou change dans l'UI.)
+
+services:
+  warp:
+    image: caomingjun/warp
+    container_name: warp
+    restart: unless-stopped
+    # Expose un SOCKS5 sur le port 1080 (joignable par le proxy via socks5://warp:1080).
+    # Le port n'est mappe sur l'hote que pour tes propres tests ; retire-le en prod si inutile.
+    ports:
+      - "1080:1080"
+    environment:
+      - WARP_SLEEP=2
+      # WARP+ (facultatif) : colle ta cle pour de meilleures perfs
+      # - WARP_LICENSE_KEY=xxxxxxxx-xxxxxxxx-xxxxxxxx
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - ./warp-data:/var/lib/cloudflare-warp
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "--max-time", "8", "--socks5", "localhost:1080", "https://cloudflare.com/cdn-cgi/trace"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  stremio-proxy:
+    build: .
+    container_name: stremio-proxy
+    restart: unless-stopped
+    depends_on:
+      warp:
+        condition: service_healthy
+    ports:
+      - "7000:7000"
+    environment:
+      - PORT=7000
+      - DATA_DIR=/app/data
+      # Sortie reseau = WARP (SOCKS5) des le 1er demarrage
+      - UPSTREAM_MODE=socks
+      - UPSTREAM_URL=socks5://warp:1080
+      # Authentification de l'interface (laisse vide = ouverte)
+      - AUTH_USER=admin
+      - AUTH_PASS=change-moi
+      # URL publique si derriere Nginx Proxy Manager en HTTPS :
+      # - PUBLIC_URL=https://proxy.mondomaine.com
+    volumes:
+      - ./data:/app/data
