@@ -55,6 +55,10 @@ services:
       # Authentification de l'interface (laisse vide = ouverte)
       - AUTH_USER=admin
       - AUTH_PASS=change-moi
+      # Clé de chiffrement des tokens /play (AES-256-GCM). Optionnel : sinon une clé
+      # aléatoire est générée et persistée dans data/play.key. À définir si tu as
+      # plusieurs répliques (clé partagée).
+      # - PLAY_SECRET=une-longue-phrase-secrete-aleatoire
       # URL publique si derriere Nginx Proxy Manager en HTTPS :
       # - PUBLIC_URL=https://proxy.mondomaine.com
     volumes:

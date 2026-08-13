@@ -161,6 +161,21 @@ sinon le lecteur Stremio recevrait un 401 et ne pourrait pas lire les flux.
 > Astuce : tu peux aussi ajouter une *Access List* côté Nginx Proxy Manager, mais l'auth
 > applicative ci-dessus suffit et voyage avec le conteneur.
 
+## Sécurité des flux (tokens `/play`)
+
+Les URLs vidéo sont encapsulées dans un token **chiffré en AES-256-GCM**, jamais en clair.
+Deux garanties :
+
+1. **Confidentialité** — l'URL réelle de la source et ses headers (qui peuvent contenir
+   des clés d'API, ex. debrid) restent illisibles dans le lien `/play`.
+2. **Intégrité / anti-forge** — le tag GCM rend le token infalsifiable : impossible de le
+   modifier ou d'en fabriquer un sans la clé serveur. Ça empêche d'utiliser le relais comme
+   **open proxy / SSRF** (relayer une URL arbitraire, ex. métadonnées cloud, réseau interne).
+
+La clé vient de `PLAY_SECRET` (env) si définie, sinon elle est générée aléatoirement et
+persistée dans `data/play.key`. **Définis `PLAY_SECRET` si tu as plusieurs répliques**
+(clé partagée) ; sinon, garde simplement le dossier `data/` persistant.
+
 ## Endpoints (pour info)
 
 | Route | Rôle |

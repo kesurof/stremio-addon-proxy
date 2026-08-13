@@ -1,15 +1,18 @@
 const { request, readAll } = require('./http');
+const { encrypt, decrypt } = require('./secret');
 
-/** Encode l'URL d'origine (+ headers et id d'addon eventuels) dans un token pour /play. */
+// Le token /play est CHIFFRE (AES-256-GCM) : l'URL réelle et les headers restent
+// confidentiels, et le token ne peut être ni modifié ni forgé sans la clé serveur
+// (protège contre l'usage du relais en open proxy / SSRF).
 function encodeToken(url, headers, addonId) {
   const payload = { u: url };
   if (headers && typeof headers === 'object' && Object.keys(headers).length > 0) payload.h = headers;
   if (addonId) payload.d = addonId;
-  return Buffer.from(JSON.stringify(payload)).toString('base64url');
+  return encrypt(JSON.stringify(payload));
 }
 
 function decodeToken(token) {
-  const obj = JSON.parse(Buffer.from(token, 'base64url').toString('utf8'));
+  const obj = JSON.parse(decrypt(token)); // lève une erreur si falsifié/forgé
   if (!obj || typeof obj.u !== 'string') throw new Error('Token invalide');
   return { url: obj.u, headers: obj.h || {}, addonId: obj.d || null };
 }
