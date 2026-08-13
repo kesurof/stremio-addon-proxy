@@ -31,6 +31,17 @@ const bwTimer = setInterval(() => {
 }, 1000);
 if (bwTimer.unref) bwTimer.unref();
 
+// "Lectures en cours" avec fenêtre de grâce : un flux reste compté tant qu'il a eu
+// une requête dans les dernières minutes (couvre les pauses de buffer du lecteur).
+// = connexions ouvertes maintenant  ∪  flux vus récemment.
+const ACTIVE_WINDOW_MS = SESSION_GAP_MS; // 5 min
+function activeCount() {
+  const now = Date.now();
+  const keys = new Set(s.activeUrls.keys());
+  for (const [k, t] of s.seen) if (now - t <= ACTIVE_WINDOW_MS) keys.add(k);
+  return keys.size;
+}
+
 // Débit courant en octets/s, moyenné sur ~5 s (0 quand rien ne circule).
 function currentBps() {
   if (bwHistory.length < 2) return 0;
@@ -109,7 +120,7 @@ function snapshot() {
     uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
     plays: s.sessions,            // lectures distinctes
     playRequests: s.requests,     // requetes /play brutes
-    playActive: s.activeUrls.size, // videos en cours
+    playActive: activeCount(),    // videos en cours (avec fenetre de grace)
     playErrors: s.playErrors,
     bytesRelayed: s.bytesRelayed,
     bandwidthBps: Math.round(currentBps()), // debit courant en octets/s
