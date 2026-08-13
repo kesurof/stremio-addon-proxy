@@ -176,6 +176,11 @@ La clé vient de `PLAY_SECRET` (env) si définie, sinon elle est générée alé
 persistée dans `data/play.key`. **Définis `PLAY_SECRET` si tu as plusieurs répliques**
 (clé partagée) ; sinon, garde simplement le dossier `data/` persistant.
 
+3. **Expiration** — chaque lien `/play` expire après `PLAY_TTL_HOURS` (défaut **12 h**,
+   `0` = jamais), ce qui limite la fenêtre de rejeu. La durée doit couvrir une session de
+   visionnage complète (film + pauses) ; un lien expiré renvoie `410` et Stremio n'a qu'à
+   rouvrir la liste des flux pour en obtenir un neuf.
+
 ## Endpoints (pour info)
 
 | Route | Rôle |

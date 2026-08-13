@@ -145,8 +145,10 @@ app.get('/play', async (req, res) => {
     target = decoded.url;
     extraHeaders = decoded.headers;
     addonId = decoded.addonId;
-  } catch {
-    return res.status(400).send('Token invalide');
+  } catch (e) {
+    return e.expired
+      ? res.status(410).send('Lien expiré')
+      : res.status(400).send('Token invalide');
   }
 
   const headers = { ...extraHeaders };

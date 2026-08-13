@@ -1,19 +1,30 @@
 const { request, readAll } = require('./http');
 const { encrypt, decrypt } = require('./secret');
 
+// Durée de validité d'un lien /play. Doit couvrir toute une session de visionnage
+// (film + pauses). 0 = pas d'expiration. Réglable via PLAY_TTL_HOURS.
+const TTL_HOURS = process.env.PLAY_TTL_HOURS !== undefined ? Number(process.env.PLAY_TTL_HOURS) : 12;
+const TTL_MS = TTL_HOURS > 0 ? TTL_HOURS * 3600 * 1000 : 0;
+
 // Le token /play est CHIFFRE (AES-256-GCM) : l'URL réelle et les headers restent
 // confidentiels, et le token ne peut être ni modifié ni forgé sans la clé serveur
-// (protège contre l'usage du relais en open proxy / SSRF).
+// (protège contre l'usage du relais en open proxy / SSRF). Il expire après TTL_MS.
 function encodeToken(url, headers, addonId) {
   const payload = { u: url };
   if (headers && typeof headers === 'object' && Object.keys(headers).length > 0) payload.h = headers;
   if (addonId) payload.d = addonId;
+  if (TTL_MS > 0) payload.x = Date.now() + TTL_MS;
   return encrypt(JSON.stringify(payload));
 }
 
 function decodeToken(token) {
   const obj = JSON.parse(decrypt(token)); // lève une erreur si falsifié/forgé
   if (!obj || typeof obj.u !== 'string') throw new Error('Token invalide');
+  if (obj.x && Date.now() > obj.x) {
+    const e = new Error('Token expiré');
+    e.expired = true;
+    throw e;
+  }
   return { url: obj.u, headers: obj.h || {}, addonId: obj.d || null };
 }
 
