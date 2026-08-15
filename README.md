@@ -132,8 +132,7 @@ ghcr.io/guiro28/stremio-addon-proxy:latest
 ```
 
 Pour l'utiliser au lieu de builder localement, décommente la ligne `image:` dans le
-compose (et retire `build: .`). Le dépôt étant **privé**, l'image l'est aussi : soit tu
-rends le *package* public sur GitHub, soit tu t'authentifies sur le VPS avant de tirer :
+compose (et retire `build: .`).
 
 ```bash
 echo $GHCR_TOKEN | docker login ghcr.io -u guiro28 --password-stdin
