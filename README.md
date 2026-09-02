@@ -71,6 +71,8 @@ Dans l'onglet **Sortie réseau** de l'interface :
 
 Le bouton **« Tester l'IP de sortie »** interroge un service d'écho et t'affiche l'IP
 publique réellement utilisée : pratique pour vérifier que WARP est bien pris en compte.
+L'interface détecte aussi automatiquement WARP et affiche son statut ainsi que l'URL
+SOCKS5 à utiliser lorsqu'elle est disponible.
 
 ### Mettre WARP en SOCKS5
 
@@ -190,6 +192,7 @@ persistée dans `data/play.key`. **Définis `PLAY_SECRET` si tu as plusieurs ré
 | `DELETE /api/addons/:id` | Supprime un addon |
 | `POST /api/settings` | Change la sortie réseau |
 | `POST /api/test-upstream` | Renvoie l'IP publique de sortie |
+| `GET /api/warp-status` | Détecte WARP et renvoie son statut et son URL |
 | `GET /:id/manifest.json` | Manifest proxifié |
 | `GET /:id/*` | Ressources proxifiées (streams réécrits) |
 | `GET /play?t=…` | Relais vidéo |
